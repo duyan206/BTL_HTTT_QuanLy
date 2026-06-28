@@ -1,0 +1,127 @@
+@model IEnumerable<QL_ThuChiNoiBo.Models.NganSach>
+@{
+    ViewData["Title"] = "Quản Lý & Cấp Phát Ngân Sách";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-1 fw-bold text-dark"><i class="bi bi-safe-fill text-success me-2"></i>Quản Lý & Cấp Phát Ngân Sách Toàn Cục</h4>
+        <p class="text-muted mb-0 small">Module Tổng Giám Đốc phân bổ nguồn kinh phí hoạt động cho các phòng ban chi nhánh trong năm @DateTime.Now.Year</p>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show shadow-sm border-0 rounded-3 d-flex align-items-center" role="alert">
+        <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+        <span>@TempData["Success"]</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show shadow-sm border-0 rounded-3 d-flex align-items-center" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+        <strong>@TempData["Error"]</strong>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4 py-4 text-muted small fw-semibold text-uppercase">Phòng Ban Chi Nhánh</th>
+                        <th class="py-4 text-muted small fw-semibold text-end text-uppercase">Quy Mô Ngân Sách</th>
+                        <th class="py-4 text-muted small fw-semibold text-end text-uppercase text-success">Đã Thu Vào</th>
+                        <th class="py-4 text-muted small fw-semibold text-end text-uppercase">Đã Tiêu Hao</th>
+                        <th class="py-4 text-muted small fw-semibold text-end text-uppercase">Đang Chờ Duyệt (Treo)</th>
+                        <th class="py-4 text-muted small fw-semibold text-end text-uppercase">Dư Địa Còn Lại</th>
+                        <th class="py-4 text-muted small fw-semibold text-center pe-4 text-uppercase">Khóa Vạn Năng</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        var conLai = item.TongNganSach + item.DaThu - item.DaChi - item.TienDangTreo;
+                        if (conLai < 0) conLai = 0;
+
+                        <tr>
+                            <td class="ps-4 fw-bold text-dark fs-6 d-flex align-items-center py-3">
+                                <span class="bg-secondary bg-opacity-10 rounded-circle d-inline-flex justify-content-center align-items-center me-3" style="width:40px;height:40px;">
+                                    <i class="bi bi-building text-secondary fs-5"></i>
+                                </span>
+                                @(item.MaPhongBanNavigation?.TenPhongBan ?? "Phòng ban mới (Không xác định)")
+                            </td>
+                            <td class="text-end fw-bold text-primary fs-5">@item.TongNganSach.ToString("N0") <span class="text-muted small fw-normal ms-1 fs-6">VNĐ</span></td>
+                            <td class="text-end text-success fw-bold fs-6">@item.DaThu.ToString("N0")</td>
+                            <td class="text-end text-danger fw-bold fs-6">@item.DaChi.ToString("N0")</td>
+                            <td class="text-end text-warning text-dark fw-bold fs-6">@item.TienDangTreo.ToString("N0")</td>
+                            <td class="text-end text-info fw-bold fs-5">@conLai.ToString("N0")</td>
+                            <td class="text-center pe-4">
+                                <button type="button" class="btn btn-sm btn-warning text-dark fw-bold px-4 rounded-pill shadow-sm py-2 hover-effect"
+                                        data-bs-toggle="modal" data-bs-target="#budgetModal_@item.MaPhongBan">
+                                    <i class="bi bi-piggy-bank me-1"></i> Bơm Tiền
+                                </button>
+
+                                <!-- Modal Cấp Phát Từng Phòng -->
+                                <div class="modal fade" id="budgetModal_@item.MaPhongBan" tabindex="-1" aria-hidden="true" style="text-align: left;">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content border-0 shadow-lg rounded-4">
+                                            <div class="modal-header shadow-sm bg-warning rounded-top border-0">
+                                                <h5 class="modal-title fw-bold text-dark"><i class="bi bi-cash-coin me-2"></i>Quyết Định Cấp Phát Nguồn Vốn</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <form asp-controller="NganSach" asp-action="UpdateBudget" method="post">
+                                                <div class="modal-body p-4 p-md-5 bg-white">
+                                                    <input type="hidden" name="maPhongBan" value="@item.MaPhongBan" />
+                                                    
+                                                    <div class="mb-4">
+                                                        <label class="form-label text-muted small fw-bold text-uppercase">Mục tiêu giải ngân cho</label>
+                                                        <input type="text" class="form-control bg-light border-0 fw-bold fs-5 text-dark py-2" value="@(item.MaPhongBanNavigation?.TenPhongBan)" disabled />
+                                                    </div>
+
+                                                    <div class="mb-4">
+                                                        <label class="form-label text-muted small fw-bold text-uppercase">Mức xả lũ hiện tại (Chốt chặn tối thiểu)</label>
+                                                        <div class="input-group mb-2 shadow-sm rounded-3 overflow-hidden">
+                                                            <span class="input-group-text bg-light border-0"><i class="bi bi-lock-fill text-danger"></i></span>
+                                                            <input type="text" class="form-control border-0 text-danger fw-bold fs-5 bg-light" value="@((item.DaChi + item.TienDangTreo - item.DaThu).ToString("N0"))" disabled />
+                                                            <span class="input-group-text bg-light border-0 text-muted">VNĐ</span>
+                                                        </div>
+                                                        <small class="text-danger"><i class="bi bi-info-circle me-1"></i>Hệ thống tự động từ chối nếu cấp mới ngân sách thấp hơn mức này.</small>
+                                                    </div>
+
+                                                    <div class="mb-3 mt-5">
+                                                        <label for="tongNganSachMoi" class="form-label text-primary fw-bold fs-5">CHỈ ĐỊNH TỔNG QUY MÔ NĂM MỚI (VNĐ)</label>
+                                                        <div class="input-group input-group-lg shadow-sm rounded-4 overflow-hidden border border-primary border-opacity-50">
+                                                            <span class="input-group-text bg-white border-0 text-primary"><i class="bi bi-safe2-fill ms-2 me-1 fs-3"></i></span>
+                                                            <input type="number" class="form-control border-0 fw-bold text-primary fs-3" name="tongNganSachMoi" id="tongNganSachMoi_@item.MaPhongBan" min="0" value="@item.TongNganSach" required placeholder="Nhập số tiền..." />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer border-0 bg-light p-4 rounded-bottom">
+                                                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Suy nghĩ lại</button>
+                                                    <button type="submit" class="btn btn-warning shadow rounded-pill px-5 fw-bold text-dark"><i class="bi bi-send-check-fill me-2"></i> Ký Duyệt Phân Bổ</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">Không có dữ liệu phòng ban nào.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+

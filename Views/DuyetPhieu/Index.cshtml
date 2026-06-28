@@ -1,0 +1,92 @@
+@model IEnumerable<QL_ThuChiNoiBo.Models.PhieuDeXuat>
+@{
+    ViewData["Title"] = "Phiếu cần tôi duyệt";
+}
+
+<div class="mb-4">
+    <h4 class="mb-1 fw-bold text-dark"><i class="bi bi-inboxes-fill text-primary me-2"></i>Phiếu Cần Tôi Duyệt</h4>
+    <p class="text-muted mb-0 small">Danh sách các đề xuất đang chờ cấp của bạn phê duyệt</p>
+</div>
+
+@if(TempData["Message"] != null) {
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle me-2"></i>@TempData["Message"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if(TempData["Error"] != null) {
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card border-0 shadow-sm rounded-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4 py-3">Mã Phiếu</th>
+                        <th class="py-3">Người Đề Xuất</th>
+                        <th class="py-3">Loại Phiếu</th>
+                        <th class="py-3">Tổng Tiền</th>
+                        <th class="py-3">Ngày Yêu Cầu</th>
+                        <th class="text-end pe-4 py-3">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="ps-4 fw-semibold text-secondary">#@item.MaPhieu</td>
+                            <td class="fw-medium text-dark"><i class="bi bi-person-fill text-muted me-1"></i> @item.NguoiTaoNavigation?.HoTen</td>
+                            <td>
+                                @if(item.LoaiPhieu == "Tạm Ứng") { <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25"><i class="bi bi-wallet2 me-1"></i> Tạm Ứng</span> }
+                                else if(item.LoaiPhieu == "Hoàn Ứng") { <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25"><i class="bi bi-arrow-repeat me-1"></i> Hoàn Ứng</span> }
+                                else { <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25"><i class="bi bi-receipt me-1"></i> Thanh Toán</span> }
+                            </td>
+                            <td class="fw-bold text-danger">@item.TongTien.ToString("N0") <span class="text-muted fw-normal small">VNĐ</span></td>
+                            <td class="text-muted small"><i class="bi bi-clock me-1"></i> @item.NgayTao?.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="text-end pe-4">
+                                <a asp-controller="PhieuDeXuat" asp-action="Details" asp-route-id="@item.MaPhieu" class="btn btn-sm btn-primary shadow-sm rounded-pill px-3">Duyệt ngay <i class="bi bi-arrow-right-short"></i></a>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5">
+                                <div class="text-muted">
+                                    <i class="bi bi-emoji-smile fs-1 d-block mb-3 opacity-50"></i>
+                                    <h5>Bạn đã xử lý hết công việc hiện tại!</h5>
+                                    <p class="mb-0">Tuyệt vời, không còn phiếu nào đang chờ bạn duyệt.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@if (ViewBag.TotalPages > 1)
+{
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            <li class="page-item @(ViewBag.CurrentPage == 1 ? "disabled" : "")">
+                <a class="page-link" asp-action="Index" asp-route-page="@(ViewBag.CurrentPage - 1)">Trang trước</a>
+            </li>
+            @for (int i = 1; i <= ViewBag.TotalPages; i++)
+            {
+                <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
+                    <a class="page-link" asp-action="Index" asp-route-page="@i">@i</a>
+                </li>
+            }
+            <li class="page-item @(ViewBag.CurrentPage == ViewBag.TotalPages ? "disabled" : "")">
+                <a class="page-link" asp-action="Index" asp-route-page="@(ViewBag.CurrentPage + 1)">Trang sau</a>
+            </li>
+        </ul>
+    </nav>
+}

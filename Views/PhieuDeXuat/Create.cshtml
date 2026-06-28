@@ -1,0 +1,175 @@
+@model QL_ThuChiNoiBo.ViewModels.PhieuDeXuatViewModel
+@{
+    ViewData["Title"] = "Tạo Phiếu Đề Xuất Mới";
+}
+
+<div class="mb-4">
+    <a asp-action="Index" class="text-decoration-none text-muted mb-2 d-inline-block hover-effect"><i class="bi bi-arrow-left me-1"></i> Quay lại danh sách</a>
+    <h4 class="fw-bold text-dark mb-1"><i class="bi bi-file-earmark-plus text-primary me-2"></i>Tạo Phiếu Đề Xuất Mới</h4>
+    <p class="text-muted small">Khởi tạo phiếu để nộp lên cấp quản lý duyệt</p>
+</div>
+
+<form asp-action="Create" method="post" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small fw-bold"></div>
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
+                    <h6 class="fw-bold text-uppercase text-muted mb-0"><i class="bi bi-info-circle me-2"></i>Thông Tin Chung</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <label asp-for="LoaiPhieu" class="form-label fw-semibold">Loại Phiếu</label>
+                        <select asp-for="LoaiPhieu" class="form-select bg-light border-0 shadow-none">
+                            <option value="TamUng">Tạm Ứng (Tạm mượn tiền công ty)</option>
+                            <option value="ThuNoiBo">Thu Nội Bộ (Thu phạt, Hoàn ứng...)</option>
+                            <option value="ThanhToan">Thanh Toán (Báo cáo hóa đơn chi tiêu)</option>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label asp-for="LyDo" class="form-label fw-semibold">Lý Do / Mục Đích Xin</label>
+                        <textarea asp-for="LyDo" class="form-control bg-light border-0 shadow-none" rows="4" placeholder="Nhập lý do chi tiết để sếp dễ duyệt..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Chứng Từ Đính Kèm (Hóa đơn, báo giá)</label>
+                        <input type="file" name="DinhKems" class="form-control bg-light border-0 shadow-none" multiple />
+                        <div class="form-text mt-2 small text-muted"><i class="bi bi-cloud-arrow-up me-1"></i> Có thể chọn nhiều file cùng lúc.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-header bg-white border-bottom-0 pt-4 pb-2 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold text-uppercase text-muted mb-0"><i class="bi bi-list-check me-2"></i>Hạng Mục Chi Tiết</h6>
+                    <button type="button" class="btn btn-sm btn-primary shadow-sm rounded-pill px-3" onclick="addChiTietRow()">
+                        <i class="bi bi-plus-circle me-1"></i> Thêm Dòng
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0" id="chiTietTable">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="ps-4 text-muted small fw-semibold" style="width: 45%;">Hạng Mục / Nội Dung</th>
+                                    <th class="text-muted small fw-semibold" style="width: 25%;">Số Tiền (VNĐ)</th>
+                                    <th class="text-muted small fw-semibold" style="width: 25%;">Ghi Chú</th>
+                                    <th class="text-center text-muted small fw-semibold pe-4" style="width: 5%;">Xóa</th>
+                                </tr>
+                            </thead>
+                            <tbody id="chiTietBody">
+                                <!-- Dynamic rows via JS -->
+                            </tbody>
+                            <tfoot class="bg-white">
+                                <tr>
+                                    <td class="text-end fw-bold text-muted pt-4 pb-4">Tổng Cộng Đề Xuất:</td>
+                                    <td colspan="3" class="pt-4 pb-4">
+                                        <span id="lblTongTien" class="fw-bold text-success fs-3 border px-4 py-2 rounded-3 bg-success bg-opacity-10">0</span> 
+                                        <span class="text-muted fw-bold ms-2">Đồng</span>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="d-flex justify-content-end gap-3 mt-4 mb-5">
+        <button type="button" class="btn btn-outline-secondary shadow-sm fw-semibold px-4 rounded-pill" onclick="window.history.back()">Hủy Bỏ</button>
+        <button type="submit" name="action" value="Draft" class="btn btn-light border shadow-sm text-secondary px-4 fw-bold rounded-pill"><i class="bi bi-save me-2"></i>Lưu Nháp</button>
+        <button type="submit" name="action" value="Submit" class="btn btn-primary shadow px-5 fw-bold rounded-pill"><i class="bi bi-send me-2"></i>Gửi Duyệt</button>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        let rowCount = 0;
+
+        function addChiTietRow() {
+            const tbody = document.getElementById('chiTietBody');
+            const row = document.createElement('tr');
+            row.id = `row_${rowCount}`;
+            row.className = "animate__animated animate__fadeIn animate__faster";
+            
+            row.innerHTML = `
+                <td class="ps-4 py-3">
+                    <input type="text" name="ChiTiets[${rowCount}].HangMuc" class="form-control border-0 bg-light" placeholder="Ví dụ: Mua laptop, trả tiền taxi..." required />
+                </td>
+                <td class="py-3">
+                    <div class="input-group">
+                        <input type="number" name="ChiTiets[${rowCount}].SoTien" class="form-control border-0 bg-light txtSoTien" placeholder="0" min="0" step="1000" oninput="calculateTotal()" required />
+                        <span class="input-group-text border-0 bg-light">đ</span>
+                    </div>
+                </td>
+                <td class="py-3">
+                    <input type="text" name="ChiTiets[${rowCount}].GhiChu" class="form-control border-0 bg-light" placeholder="..." />
+                </td>
+                <td class="text-center pe-4 py-3">
+                    <button type="button" class="btn btn-sm btn-light text-danger rounded-circle p-2" onclick="removeRow(${rowCount})" style="width: 32px; height: 32px;" title="Xóa dòng này">
+                        <i class="bi bi-trash-fill"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+            rowCount++;
+        }
+
+        function removeRow(id) {
+            const row = document.getElementById(`row_${id}`);
+            if (row) {
+                row.remove();
+                renameInputs();
+                calculateTotal();
+            }
+        }
+
+        function renameInputs() {
+            const tbody = document.getElementById('chiTietBody');
+            const rows = tbody.querySelectorAll('tr');
+            rows.forEach((row, index) => {
+                row.id = `row_${index}`;
+                const inputs = row.querySelectorAll('input');
+                inputs.forEach(input => {
+                    const nameAttr = input.getAttribute('name');
+                    if (nameAttr) {
+                        const newName = nameAttr.replace(/ChiTiets\[\d+\]/, `ChiTiets[${index}]`);
+                        input.setAttribute('name', newName);
+                    }
+                });
+            });
+            rowCount = rows.length; // Ensure rowCount is correctly updated after deletion
+        }
+
+        function calculateTotal() {
+            let total = 0;
+            const amountInputs = document.querySelectorAll('.txtSoTien');
+            amountInputs.forEach(input => {
+                let val = parseFloat(input.value);
+                if (isNaN(val)) val = 0;
+                val = Math.max(0, val);
+                input.value = val;
+                total += val;
+            });
+            document.getElementById('lblTongTien').textContent = new Intl.NumberFormat('vi-VN').format(total);
+        }
+
+        // Initialize with 1 row automatically
+        document.addEventListener('DOMContentLoaded', function() {
+            addChiTietRow();
+            // Animate effect CSS insertion
+            const style = document.createElement('style');
+            style.textContent = `
+                @@keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+                .animate__fadeIn { animation: fadeIn 0.3s ease-out; }
+            `;
+            document.head.append(style);
+        });
+    </script>
+}
+
+
+
