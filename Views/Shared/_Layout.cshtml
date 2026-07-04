@@ -58,7 +58,9 @@
                     @if (isLanhDao)
                     {
                         <li class="nav-item"><a class="nav-link fw-bold text-success" asp-controller="Home" asp-action="Index">Dashboard</a></li>
-                        <li class="nav-item"><a class="nav-link text-warning fw-bold" asp-controller="NganSach" asp-action="Index"><i class="bi bi-cash-stack me-1"></i>Cấp Phát NS</a></li>
+                        @if (role.Contains("Giám đốc")) {
+                            <li class="nav-item"><a class="nav-link text-warning fw-bold" asp-controller="NganSach" asp-action="Index"><i class="bi bi-cash-stack me-1"></i>Cấp Phát NS</a></li>
+                        }
                     }
 
                     <li class="nav-item"><a class="nav-link" asp-controller="PhieuDeXuat" asp-action="Index">Phiếu Đề Xuất</a></li>
@@ -71,6 +73,25 @@
                 <ul class="navbar-nav">
                     @if (User.Identity != null && User.Identity.IsAuthenticated)
                     {
+                        <li class="nav-item dropdown me-2 pe-3 d-flex align-items-center" style="border-right: 1px solid #ebedf2;">
+                            <a class="nav-link d-flex align-items-center position-relative" href="#" id="notiDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside" style="padding-top: 5px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="#5b6b79" class="bi bi-bell-fill hover-effect" viewBox="0 0 16 16">
+                                  <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2m.995-14.901a1 1 0 1 0-1.99 0A5 5 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901"/>
+                                </svg>
+                                <span class="position-absolute translate-middle badge rounded-pill bg-danger" id="notiBadge" style="display: none; top: 8px; left: 24px; font-size: 0.65rem; border: 2px solid white;">
+                                    0
+                                </span>
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-end shadow border-0 mt-2 p-0" aria-labelledby="notiDropdown" style="width: 360px; border-radius: 12px;">
+                                <div class="d-flex justify-content-between align-items-center p-3 border-bottom" style="background-color: #f8f9fa; border-radius: 12px 12px 0 0;">
+                                    <h6 class="m-0 fw-bold text-dark fs-5">Thông báo</h6>
+                                    <a href="#" class="text-decoration-none small text-primary fw-semibold" onclick="markAllAsRead(event)">Đánh dấu đã đọc</a>
+                                </div>
+                                <div class="overflow-auto" style="max-height: 380px;" id="notiContainer">
+                                    <div class="text-center p-4 text-muted small"><div class="spinner-border spinner-border-sm text-primary" role="status"></div></div>
+                                </div>
+                            </div>
+                        </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
                                 <div class="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center" style="width: 32px; height: 32px; font-weight: bold; font-size: 14px;">
@@ -79,6 +100,10 @@
                                 <span class="fw-semibold text-dark">@User.Identity.Name</span>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2" style="border-radius: 12px; min-width: 200px;">
+                                <li>
+                                    <a asp-controller="Auth" asp-action="ChangePassword" class="dropdown-item py-2"><i class="bi bi-key me-2"></i> Đổi mật khẩu</a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <form asp-controller="Auth" asp-action="Logout" method="post">
                                         <button type="submit" class="dropdown-item text-danger py-2"><i class="bi bi-box-arrow-right me-2"></i> Đăng xuất</button>
@@ -120,8 +145,77 @@
             }
         });
     </script>
+<script>
+    function loadNotifications() {
+        var badge = document.getElementById("notiBadge");
+        var container = document.getElementById("notiContainer");
+        if (!badge || !container) return;
+
+        fetch("/ThongBao/GetLatest")
+            .then(r => r.json())
+            .then(data => {
+                if (data.unreadCount > 0) {
+                    badge.style.display = "inline-block";
+                    badge.innerText = data.unreadCount > 99 ? "99+" : data.unreadCount;
+                } else {
+                    badge.style.display = "none";
+                }
+
+                if (data.notifications.length === 0) {
+                    container.innerHTML = "<div class=\"p-4 text-center text-muted small fw-semibold\">Bạn không có thông báo nào.</div>";
+                    return;
+                }
+
+                let html = "";
+                data.notifications.forEach(tb => {
+                    let bgClass = tb.daDoc ? "bg-white" : "bg-light";
+                    let dotClass = tb.daDoc ? "d-none" : "d-block";
+                    let hrefAttr = tb.url ? `href="${tb.url}"` : `href="#"`;
+                    
+                    html += `
+                        <a ${hrefAttr} class="dropdown-item p-3 border-bottom ${bgClass} text-wrap" style="transition: background 0.2s;" onclick="markAsRead(event, ${tb.maThongBao}, '${tb.url}')">
+                            <div class="d-flex w-100 justify-content-between align-items-start">
+                                <div class="pe-2">
+                                    <p class="mb-1 text-dark" style="font-size: 0.9rem; line-height: 1.4; white-space: normal;">${tb.noiDung}</p>
+                                    <small class="${tb.daDoc ? 'text-muted' : 'text-primary fw-semibold'}">${tb.thoiGianStr}</small>
+                                </div>
+                                <div class="${dotClass} rounded-circle bg-primary mt-2" style="width: 10px; height: 10px; flex-shrink: 0;"></div>
+                            </div>
+                        </a>
+                    `;
+                });
+                container.innerHTML = html;
+            })
+            .catch(e => console.error(e));
+    }
+
+    function markAsRead(e, id, targetUrl) {
+        e.preventDefault();
+        fetch("/ThongBao/MarkAsRead/" + id, { method: "POST" })
+            .then(() => {
+                if(targetUrl && targetUrl !== "null") window.location.href = targetUrl;
+                else loadNotifications();
+            });
+    }
+
+    function markAllAsRead(e) {
+        e.preventDefault();
+        fetch("/ThongBao/MarkAllAsRead", { method: "POST" })
+            .then(() => loadNotifications());
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadNotifications();
+        setInterval(loadNotifications, 30000); 
+    });
+</script>
 </body>
 </html>
+
+
+
+
+
 
 
 

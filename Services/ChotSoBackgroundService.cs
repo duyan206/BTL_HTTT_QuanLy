@@ -38,7 +38,7 @@ namespace QL_ThuChiNoiBo.Services
 
                         foreach(var id in keToanTruongIds)
                         {
-                            bool hasNotified = await context.Set<ThongBao>().AnyAsync(t => t.NguoiNhan == id && t.ThoiGian.Date == now.Date);
+                            bool hasNotified = await context.Set<ThongBao>().AnyAsync(t => t.NguoiNhan == id && t.ThoiGian.Value.Date == now.Date);
                             if (!hasNotified)
                             {
                                 context.Set<ThongBao>().Add(new ThongBao
@@ -57,4 +57,5 @@ namespace QL_ThuChiNoiBo.Services
         }
     }
 }
+
 

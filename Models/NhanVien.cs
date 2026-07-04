@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace QL_ThuChiNoiBo.Models;
 
 [Table("NhanVien")]
-[Index("TenDangNhap", Name = "UQ__NhanVien__55F68FC04840683B", IsUnique = true)]
+[Index("TenDangNhap", Name = "UQ__NhanVien__55F68FC048C89706", IsUnique = true)]
 public partial class NhanVien
 {
     [Key]
@@ -54,4 +54,7 @@ public partial class NhanVien
 
     [InverseProperty("MaTruongPhongNavigation")]
     public virtual ICollection<PhongBan> PhongBans { get; set; } = new List<PhongBan>();
+
+    [InverseProperty("NguoiNhanNavigation")]
+    public virtual ICollection<ThongBao> ThongBaos { get; set; } = new List<ThongBao>();
 }

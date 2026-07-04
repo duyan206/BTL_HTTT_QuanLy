@@ -42,7 +42,7 @@ namespace QL_ThuChiNoiBo.Controllers
         {
             var role = User.FindFirstValue(System.Security.Claims.ClaimTypes.Role) ?? "";
             var allowedRoles = new[] { "Giám đốc", "Kế toán trưởng" };
-            if (!allowedRoles.Contains(role)) return Unauthorized();
+            if (!allowedRoles.Contains(role)) return RedirectToAction("Login", "Auth");
 
             var year = DateTime.Now.Year;
             var dashboardData = await _budgetService.GetBudgetDashboardAsync(year);
@@ -94,4 +94,5 @@ namespace QL_ThuChiNoiBo.Controllers
         }
     }
 }
+
 

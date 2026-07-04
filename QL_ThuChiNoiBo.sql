@@ -62,6 +62,7 @@ CREATE TABLE NganSach (
     MaNganSach INT IDENTITY(1,1) PRIMARY KEY,
     MaPhongBan INT NOT NULL,
     NamTaiChinh INT NOT NULL, 
+    Thang INT NULL,       -- [UPDATE] Hỗ trợ Chốt Sổ đệm cuốn chiếu tháng
     TongNganSach DECIMAL(18,2) NOT NULL DEFAULT 0,
     DaChi DECIMAL(18,2) NOT NULL DEFAULT 0,
     DaThu DECIMAL(18,2) NOT NULL DEFAULT 0,     -- [UPDATE] Thêm túi đựng tiền THU NỘI BỘ
@@ -150,6 +151,18 @@ CREATE TABLE NhatKyDuyet (
     ThoiGian DATETIME DEFAULT GETDATE(),
     FOREIGN KEY (MaPhieu) REFERENCES PhieuDeXuat(MaPhieu),
     FOREIGN KEY (NguoiXuLy) REFERENCES NhanVien(MaNhanVien)
+);
+GO
+
+
+CREATE TABLE ThongBao (
+    MaThongBao INT IDENTITY(1,1) PRIMARY KEY,
+    NguoiNhan INT NOT NULL,
+    NoiDung NVARCHAR(500) NOT NULL,
+    Url NVARCHAR(255),
+    ThoiGian DATETIME DEFAULT GETDATE(),
+    DaDoc BIT NOT NULL DEFAULT 0,
+    FOREIGN KEY (NguoiNhan) REFERENCES NhanVien(MaNhanVien)
 );
 GO
 

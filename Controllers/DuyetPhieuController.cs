@@ -49,10 +49,10 @@ namespace QL_ThuChiNoiBo.Controllers
         public async Task<IActionResult> Approve(int id)
         {
             var role = User.FindFirstValue(ClaimTypes.Role) ?? "";
-            if (role == "Nhân viên" || string.IsNullOrEmpty(role)) return Unauthorized();
+            if (role == "Nhân viên" || string.IsNullOrEmpty(role)) return RedirectToAction("Login", "Auth");
 
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+            if (string.IsNullOrEmpty(userIdStr)) return RedirectToAction("Login", "Auth");
 
             var userId = int.Parse(userIdStr);
             bool success = await _workflowService.ApproveAsync(id, userId);
@@ -70,7 +70,7 @@ namespace QL_ThuChiNoiBo.Controllers
         public async Task<IActionResult> Reject(int id, string reason)
         {
             var role = User.FindFirstValue(ClaimTypes.Role) ?? "";
-            if (role == "Nhân viên" || string.IsNullOrEmpty(role)) return Unauthorized();
+            if (role == "Nhân viên" || string.IsNullOrEmpty(role)) return RedirectToAction("Login", "Auth");
 
             if (string.IsNullOrWhiteSpace(reason))
             {
@@ -79,7 +79,7 @@ namespace QL_ThuChiNoiBo.Controllers
             }
 
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+            if (string.IsNullOrEmpty(userIdStr)) return RedirectToAction("Login", "Auth");
 
             var userId = int.Parse(userIdStr);
             bool success = await _workflowService.RejectAsync(id, userId, reason);
@@ -93,4 +93,5 @@ namespace QL_ThuChiNoiBo.Controllers
         }
     }
 }
+
 

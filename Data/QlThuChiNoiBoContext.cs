@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using QL_ThuChiNoiBo.Models;
@@ -29,13 +29,14 @@ public partial class QlThuChiNoiBoContext : DbContext
     public virtual DbSet<NganSach> NganSaches { get; set; }
 
     public virtual DbSet<NhanVien> NhanViens { get; set; }
-    public virtual DbSet<ThongBao> ThongBaos { get; set; }
 
     public virtual DbSet<NhatKyDuyet> NhatKyDuyets { get; set; }
 
     public virtual DbSet<PhieuDeXuat> PhieuDeXuats { get; set; }
 
     public virtual DbSet<PhongBan> PhongBans { get; set; }
+
+    public virtual DbSet<ThongBao> ThongBaos { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
@@ -45,12 +46,12 @@ public partial class QlThuChiNoiBoContext : DbContext
     {
         modelBuilder.Entity<CauHinhLuongDuyet>(entity =>
         {
-            entity.HasKey(e => e.MaCauHinh).HasName("PK__CauHinhL__F0685B7D72E06606");
+            entity.HasKey(e => e.MaCauHinh).HasName("PK__CauHinhL__F0685B7DB3791EA7");
         });
 
         modelBuilder.Entity<ChiTietLuongDuyet>(entity =>
         {
-            entity.HasKey(e => e.MaChiTietLuong).HasName("PK__ChiTietL__26BE623612CFF99F");
+            entity.HasKey(e => e.MaChiTietLuong).HasName("PK__ChiTietL__26BE62364DF45975");
 
             entity.HasOne(d => d.MaCauHinhNavigation).WithMany(p => p.ChiTietLuongDuyets).HasConstraintName("FK__ChiTietLu__MaCau__5CD6CB2B");
 
@@ -63,21 +64,21 @@ public partial class QlThuChiNoiBoContext : DbContext
 
         modelBuilder.Entity<ChiTietPhieu>(entity =>
         {
-            entity.HasKey(e => e.MaChiTiet).HasName("PK__ChiTietP__CDF0A114E664F47E");
+            entity.HasKey(e => e.MaChiTiet).HasName("PK__ChiTietP__CDF0A11403FF576A");
 
             entity.HasOne(d => d.MaPhieuNavigation).WithMany(p => p.ChiTietPhieus).HasConstraintName("FK__ChiTietPh__MaPhi__534D60F1");
         });
 
         modelBuilder.Entity<ChucVu>(entity =>
         {
-            entity.HasKey(e => e.MaChucVu).HasName("PK__ChucVu__D46395339CB25083");
+            entity.HasKey(e => e.MaChucVu).HasName("PK__ChucVu__D463953306364F77");
 
             entity.Property(e => e.TrangThaiHoatDong).HasDefaultValue(true);
         });
 
         modelBuilder.Entity<ChungTuDinhKem>(entity =>
         {
-            entity.HasKey(e => e.MaChungTu).HasName("PK__ChungTuD__FA38860D9EB9D206");
+            entity.HasKey(e => e.MaChungTu).HasName("PK__ChungTuD__FA38860D392F1943");
 
             entity.Property(e => e.NgayTaiLen).HasDefaultValueSql("(getdate())");
 
@@ -86,7 +87,7 @@ public partial class QlThuChiNoiBoContext : DbContext
 
         modelBuilder.Entity<NganSach>(entity =>
         {
-            entity.HasKey(e => e.MaNganSach).HasName("PK__NganSach__E8A10D32C732CA87");
+            entity.HasKey(e => e.MaNganSach).HasName("PK__NganSach__E8A10D3289B7453F");
 
             entity.HasOne(d => d.MaPhongBanNavigation).WithMany(p => p.NganSaches)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -95,7 +96,7 @@ public partial class QlThuChiNoiBoContext : DbContext
 
         modelBuilder.Entity<NhanVien>(entity =>
         {
-            entity.HasKey(e => e.MaNhanVien).HasName("PK__NhanVien__77B2CA47DF18026F");
+            entity.HasKey(e => e.MaNhanVien).HasName("PK__NhanVien__77B2CA470022FB75");
 
             entity.Property(e => e.TrangThaiHoatDong).HasDefaultValue(true);
 
@@ -110,7 +111,7 @@ public partial class QlThuChiNoiBoContext : DbContext
 
         modelBuilder.Entity<NhatKyDuyet>(entity =>
         {
-            entity.HasKey(e => e.MaNhatKy).HasName("PK__NhatKyDu__E42EF42EFAE2EAF4");
+            entity.HasKey(e => e.MaNhatKy).HasName("PK__NhatKyDu__E42EF42E7A3CEDB7");
 
             entity.Property(e => e.ThoiGian).HasDefaultValueSql("(getdate())");
 
@@ -125,7 +126,7 @@ public partial class QlThuChiNoiBoContext : DbContext
 
         modelBuilder.Entity<PhieuDeXuat>(entity =>
         {
-            entity.HasKey(e => e.MaPhieu).HasName("PK__PhieuDeX__2660BFE01D0266ED");
+            entity.HasKey(e => e.MaPhieu).HasName("PK__PhieuDeX__2660BFE0A70992AF");
 
             entity.Property(e => e.BuocDuyetHienTai).HasDefaultValue(1);
             entity.Property(e => e.NgayTao).HasDefaultValueSql("(getdate())");
@@ -144,11 +145,22 @@ public partial class QlThuChiNoiBoContext : DbContext
 
         modelBuilder.Entity<PhongBan>(entity =>
         {
-            entity.HasKey(e => e.MaPhongBan).HasName("PK__PhongBan__D0910CC89DC8BA68");
+            entity.HasKey(e => e.MaPhongBan).HasName("PK__PhongBan__D0910CC891792BAC");
 
             entity.Property(e => e.TrangThaiHoatDong).HasDefaultValue(true);
 
             entity.HasOne(d => d.MaTruongPhongNavigation).WithMany(p => p.PhongBans).HasConstraintName("FK_PhongBan_TruongPhong");
+        });
+
+        modelBuilder.Entity<ThongBao>(entity =>
+        {
+            entity.HasKey(e => e.MaThongBao).HasName("PK__ThongBao__04DEB54E2C95C8B9");
+
+            entity.Property(e => e.ThoiGian).HasDefaultValueSql("(getdate())");
+
+            entity.HasOne(d => d.NguoiNhanNavigation).WithMany(p => p.ThongBaos)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__ThongBao__NguoiN__68487DD7");
         });
 
         OnModelCreatingPartial(modelBuilder);
@@ -156,4 +168,3 @@ public partial class QlThuChiNoiBoContext : DbContext
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }
-

@@ -16,7 +16,7 @@ public partial class NganSach
 
     public int NamTaiChinh { get; set; }
 
-    public int Thang { get; set; }
+    public int? Thang { get; set; }
 
     [Column(TypeName = "decimal(18, 2)")]
     public decimal TongNganSach { get; set; }

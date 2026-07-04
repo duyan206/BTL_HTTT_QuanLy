@@ -19,48 +19,129 @@ namespace QL_ThuChiNoiBo.Services
             _budgetService = budgetService;
         }
 
-        public async Task<List<PhieuDeXuat>> GetPendingRequestsAsync(int userId, int userChucVuId, int userPhongBanId)
+                private async Task<List<int>> GetApprovalChain(int creatorId, string loaiPhieu, decimal tongTien)
         {
-            var phieus = await _context.PhieuDeXuats
+            var creator = await _context.NhanViens.FindAsync(creatorId);
+            if (creator == null) return new List<int> { 1 };
+
+            int role = creator.MaChucVu;
+            
+            bool isGiamDoc = (role == 1);
+            bool isKeToanTruong = (role == 2);
+            bool isTruongPhong = (role == 3 || role == 6 || role == 8);
+
+            if (isGiamDoc) return new List<int> { 2 };
+            if (isKeToanTruong) return new List<int> { 1 };
+            if (isTruongPhong) return new List<int> { 2, 1 };
+
+            // Nhân viên
+            if (loaiPhieu == "ThanhToan")
+            {
+                if (tongTien > 5000000)
+                    return new List<int> { 3, 2, 1 }; // 3 is code for Trưởng phòng step
+                else
+                    return new List<int> { 3, 2 }; 
+            }
+            else
+            {
+                // Tạm ứng, Hoàn ứng, ThuNộiBộ -> Không qua Trưởng phòng. Thẳng tới Kế toán trưởng và Giám đốc
+                return new List<int> { 2, 1 };
+            }
+        }
+
+                public async Task NotifyNextApproverAsync(PhieuDeXuat p)
+        {
+            var chain = await GetApprovalChain(p.NguoiTao, p.LoaiPhieu, p.TongTien);
+            int currentZeroIndex = (p.BuocDuyetHienTai ?? 1) - 1;
+            
+            if (currentZeroIndex >= 0 && currentZeroIndex < chain.Count)
+            {
+                int expectedRole = chain[currentZeroIndex];
+                List<int> recipientIds = new List<int>();
+
+                if (expectedRole == 3)
+                {
+                    recipientIds = await _context.NhanViens
+                        .Where(n => n.MaChucVu == 3 && n.MaPhongBan == p.MaPhongBan)
+                        .Select(n => n.MaNhanVien)
+                        .ToListAsync();
+                }
+                else
+                {
+                    recipientIds = await _context.NhanViens
+                        .Where(n => n.MaChucVu == expectedRole)
+                        .Select(n => n.MaNhanVien)
+                        .ToListAsync();
+                }
+
+                foreach (var id in recipientIds)
+                {
+                    _context.Set<ThongBao>().Add(new ThongBao {
+                        NguoiNhan = id,
+                        NoiDung = "Có 1 phiếu đề xuất (Mã: #" + p.MaPhieu + ") đang chờ bạn phê duyệt!",
+                        Url = "/DuyetPhieu",
+                        ThoiGian = DateTime.Now
+                    });
+                }
+            }
+        }
+
+        public async Task<List<PhieuDeXuat>> GetPendingRequestsAsync(int userId, int userChucVuId, int? userPhongBanId)
+        {
+            var pendingPhieus = await _context.PhieuDeXuats
                 .Include(p => p.NguoiTaoNavigation)
+                .ThenInclude(n => n.MaPhongBanNavigation)
                 .Where(p => p.TrangThai == "Chờ duyệt")
+                .AsNoTracking()
                 .ToListAsync();
 
-            var pendingPhieus = new List<PhieuDeXuat>();
-            var configs = await _context.CauHinhLuongDuyets.Include(c => c.ChiTietLuongDuyets).ToListAsync();
-
-            foreach (var p in phieus)
+            var result = new List<PhieuDeXuat>();
+            foreach (var p in pendingPhieus)
             {
-                var config = configs.FirstOrDefault(c => c.LoaiPhieu == p.LoaiPhieu && p.TongTien >= c.TienToiThieu && p.TongTien <= c.TienToiDa);
-                if (config != null)
+                var chain = await GetApprovalChain(p.NguoiTao, p.LoaiPhieu, p.TongTien);
+                int currentZeroIndex = (p.BuocDuyetHienTai ?? 1) - 1; // BuocDuyetHienTai starts at 1
+
+                if (currentZeroIndex >= 0 && currentZeroIndex < chain.Count)
                 {
-                    var currentStep = config.ChiTietLuongDuyets.FirstOrDefault(ct => ct.ThuTuBuoc == p.BuocDuyetHienTai);
-                    if (currentStep != null)
+                    int expectedRole = chain[currentZeroIndex];
+                    if (expectedRole == userChucVuId)
                     {
-                        if (currentStep.MaChucVuDuyet == userChucVuId && 
-                            (currentStep.MaPhongBanDuyet == null || currentStep.MaPhongBanDuyet == userPhongBanId))
+                        if (expectedRole == 3)
                         {
-                            pendingPhieus.Add(p);
+                            // Trưởng phòng bộ phận chỉ được duyệt phiếu của nhân viên trong chính phòng đó
+                            if (p.NguoiTaoNavigation.MaPhongBan == userPhongBanId.GetValueOrDefault())
+                            {
+                                result.Add(p);
+                            }
+                        }
+                        else
+                        {
+                            result.Add(p);
                         }
                     }
                 }
             }
-            return pendingPhieus.OrderByDescending(p => p.NgayTao).ToList();
+            return result.OrderByDescending(x => x.NgayTao).ToList();
         }
 
-        public async Task<bool> CanApproveAsync(int phieuId, int userChucVuId, int userPhongBanId)
+        public async Task<bool> CanApproveAsync(int phieuId, int userChucVuId, int? userPhongBanId)
         {
-            var p = await _context.PhieuDeXuats.FirstOrDefaultAsync(x => x.MaPhieu == phieuId && x.TrangThai == "Chờ duyệt");
-            if (p == null) return false;
+            var phieu = await _context.PhieuDeXuats.Include(p => p.NguoiTaoNavigation).FirstOrDefaultAsync(x => x.MaPhieu == phieuId);
+            if (phieu == null || phieu.TrangThai != "Chờ duyệt") return false;
 
-            var config = await _context.CauHinhLuongDuyets.Include(c => c.ChiTietLuongDuyets)
-                .FirstOrDefaultAsync(c => c.LoaiPhieu == p.LoaiPhieu && p.TongTien >= c.TienToiThieu && p.TongTien <= c.TienToiDa);
-            if(config == null) return false;
+            var chain = await GetApprovalChain(phieu.NguoiTao, phieu.LoaiPhieu, phieu.TongTien);
+            int currentZeroIndex = (phieu.BuocDuyetHienTai ?? 1) - 1;
 
-            var currentStep = config.ChiTietLuongDuyets.FirstOrDefault(ct => ct.ThuTuBuoc == p.BuocDuyetHienTai);
-            if(currentStep == null) return false;
-
-            return currentStep.MaChucVuDuyet == userChucVuId && (currentStep.MaPhongBanDuyet == null || currentStep.MaPhongBanDuyet == userPhongBanId);
+            if (currentZeroIndex >= 0 && currentZeroIndex < chain.Count)
+            {
+                int expectedRole = chain[currentZeroIndex];
+                if (expectedRole == userChucVuId)
+                {
+                    if (expectedRole == 3 && phieu.NguoiTaoNavigation.MaPhongBan != userPhongBanId.GetValueOrDefault()) return false;
+                    return true;
+                }
+            }
+            return false;
         }
 
         public async Task<bool> ApproveAsync(int phieuId, int userId)
@@ -71,11 +152,8 @@ namespace QL_ThuChiNoiBo.Services
                 var phieu = await _context.PhieuDeXuats.FirstOrDefaultAsync(p => p.MaPhieu == phieuId);
                 if (phieu == null || phieu.TrangThai != "Chờ duyệt") return false;
 
-                var config = await _context.CauHinhLuongDuyets
-                    .Include(c => c.ChiTietLuongDuyets)
-                    .FirstOrDefaultAsync(c => c.LoaiPhieu == phieu.LoaiPhieu && phieu.TongTien >= c.TienToiThieu && phieu.TongTien <= c.TienToiDa);
-
-                if (config == null) throw new Exception("Config not found");
+                var chain = await GetApprovalChain(phieu.NguoiTao, phieu.LoaiPhieu, phieu.TongTien);
+                if ((phieu.BuocDuyetHienTai ?? 1) < 1 || (phieu.BuocDuyetHienTai ?? 1) > chain.Count) return false;
 
                 phieu.BuocDuyetHienTai++;
                 
@@ -84,18 +162,20 @@ namespace QL_ThuChiNoiBo.Services
                     MaPhieu = phieuId,
                     NguoiXuLy = userId,
                     HanhDong = "Phê Duyệt",
-                    ThoiGian = DateTime.Now
+                    ThoiGian = DateTime.Now,
+                    GhiChu = "Dynamic Workflow Mode - Chấp thuận"
                 };
                 _context.NhatKyDuyets.Add(nhatKy);
 
-                if (phieu.BuocDuyetHienTai > config.TongSoBuoc)
+                if ((phieu.BuocDuyetHienTai ?? 1) > chain.Count)
                 {
                     phieu.TrangThai = "Đã duyệt";
+                    _context.Set<ThongBao>().Add(new ThongBao { NguoiNhan = phieu.NguoiTao, NoiDung = $"Xin chúc mừng! Phiếu #" + phieu.MaPhieu + " của bạn đã được PHÊ DUYỆT TỔNG!", Url = "/PhieuDeXuat/Details/" + phieu.MaPhieu, ThoiGian = DateTime.Now });
                     await _budgetService.CommitBudgetAsync(phieu.MaPhongBan, phieu.TongTien, phieu.LoaiPhieu);
                 }
 
                 _context.PhieuDeXuats.Update(phieu);
-                await _context.SaveChangesAsync();
+                if (phieu.TrangThai == "Chờ duyệt") { await NotifyNextApproverAsync(phieu); } await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
                 return true;
             }
@@ -115,12 +195,13 @@ namespace QL_ThuChiNoiBo.Services
                 if (phieu == null || phieu.TrangThai != "Chờ duyệt") return false;
 
                 phieu.TrangThai = "Từ chối";
+                _context.Set<ThongBao>().Add(new ThongBao { NguoiNhan = phieu.NguoiTao, NoiDung = $"Rất tiếc! Phiếu #" + phieu.MaPhieu + " của bạn đã bị TỪ CHỐI. Lý do: " + reason, Url = "/PhieuDeXuat/Details/" + phieu.MaPhieu, ThoiGian = DateTime.Now });
                 
                 var nhatKy = new NhatKyDuyet
                 {
                     MaPhieu = phieuId,
                     NguoiXuLy = userId,
-                    HanhDong = "Từ chối",
+                    HanhDong = "Từ Chối",
                     GhiChu = reason,
                     ThoiGian = DateTime.Now
                 };
@@ -129,7 +210,7 @@ namespace QL_ThuChiNoiBo.Services
                 await _budgetService.ReleaseHoldBudgetAsync(phieu.MaPhongBan, phieu.TongTien, phieu.LoaiPhieu);
 
                 _context.PhieuDeXuats.Update(phieu);
-                await _context.SaveChangesAsync();
+                if (phieu.TrangThai == "Chờ duyệt") { await NotifyNextApproverAsync(phieu); } await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
                 return true;
             }
@@ -141,4 +222,11 @@ namespace QL_ThuChiNoiBo.Services
         }
     }
 }
+
+
+
+
+
+
+
 

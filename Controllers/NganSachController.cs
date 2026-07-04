@@ -22,17 +22,17 @@ namespace QL_ThuChiNoiBo.Controllers
         public async Task<IActionResult> Index()
         {
             var role = User.FindFirstValue(System.Security.Claims.ClaimTypes.Role) ?? "";
-            var allowedRoles = new[] { "Giám đốc", "Kế toán trưởng" };
+            var allowedRoles = new[] { "Giám đốc" };
             if (!allowedRoles.Contains(role))
             {
                 TempData["Error"] = "Lỗ hổng RBAC bị chặn: Nhân viên tuyệt đối không được cấp phép truy cập Quản trị Ngân Sách!";
                 return RedirectToAction("Index", "PhieuDeXuat");
             }
 
-            var year = DateTime.Now.Year;
+            var month = DateTime.Now.Month; var year = DateTime.Now.Year;
             var nganSaches = await _context.NganSaches
                 .Include(n => n.MaPhongBanNavigation)
-                .Where(n => n.NamTaiChinh == year)
+                .Where(n => n.Thang == month && n.NamTaiChinh == year)
                 .ToListAsync();
 
             // Tự động Add thêm những phòng ban rỗng chưa có bản ghi ngân sách trong database nếu bị sót
@@ -44,8 +44,7 @@ namespace QL_ThuChiNoiBo.Controllers
                     var newNganSach = new Models.NganSach
                     {
                         MaPhongBan = dept.MaPhongBan,
-                        NamTaiChinh = year,
-                        TongNganSach = 0,
+                        Thang = month, NamTaiChinh = year, TongNganSach = 0,
                         DaChi = 0,
                         TienDangTreo = 0
                     };
@@ -66,7 +65,7 @@ namespace QL_ThuChiNoiBo.Controllers
         public async Task<IActionResult> UpdateBudget(int maPhongBan, decimal tongNganSachMoi)
         {
             var role = User.FindFirstValue(System.Security.Claims.ClaimTypes.Role) ?? "";
-            var allowedRoles = new[] { "Giám đốc", "Kế toán trưởng" };
+            var allowedRoles = new[] { "Giám đốc" };
             if (!allowedRoles.Contains(role))
             {
                 TempData["Error"] = "Cảnh báo bảo mật: Bạn không có chức năng Cấp phát ngân sách!";
@@ -79,10 +78,10 @@ namespace QL_ThuChiNoiBo.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            var year = DateTime.Now.Year;
+            var month = DateTime.Now.Month; var year = DateTime.Now.Year;
             var nganSach = await _context.NganSaches
                 .Include(n => n.MaPhongBanNavigation)
-                .FirstOrDefaultAsync(n => n.MaPhongBan == maPhongBan && n.NamTaiChinh == year);
+                .FirstOrDefaultAsync(n => n.MaPhongBan == maPhongBan && n.Thang == DateTime.Now.Month && n.NamTaiChinh == year);
 
             if (nganSach == null)
             {
@@ -106,3 +105,5 @@ namespace QL_ThuChiNoiBo.Controllers
         }
     }
 }
+
+

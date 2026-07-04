@@ -109,7 +109,7 @@
     <div class="col-lg-4">
         <div class="card shadow-sm border-0 mb-4 bg-light bg-opacity-50">
             <div class="card-body">
-                <span class="badge py-2 px-3 bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 mb-3 fs-6">@Model.LoaiPhieu</span>
+                @QL_ThuChiNoiBo.Utils.LoaiPhieuHelper.RenderBadge(Model.LoaiPhieu)
                 <div class="mb-3">
                     <span class="text-muted small d-block mb-1">Trạng Thái:</span>
                     @if (Model.TrangThai == "Nháp") { <span class="badge bg-secondary">Nháp</span> }
@@ -207,3 +207,4 @@
         </div>
     </div>
 </div>
+

@@ -17,12 +17,14 @@ namespace QL_ThuChiNoiBo.Controllers
         private readonly QlThuChiNoiBoContext _context;
         private readonly IWebHostEnvironment _env;
         private readonly BudgetService _budgetService;
+        private readonly WorkflowService _workflowService;
 
-        public PhieuDeXuatController(QlThuChiNoiBoContext context, IWebHostEnvironment env, BudgetService budgetService)
+        public PhieuDeXuatController(QlThuChiNoiBoContext context, IWebHostEnvironment env, BudgetService budgetService, WorkflowService workflowService)
         {
             _context = context;
             _env = env;
             _budgetService = budgetService;
+            _workflowService = workflowService;
         }
 
         public async Task<IActionResult> Index(int page = 1)
@@ -81,7 +83,7 @@ namespace QL_ThuChiNoiBo.Controllers
                 var phongBanIdStr = User.FindFirstValue("PhongBanId");
                 
                 if (string.IsNullOrEmpty(userIdStr) || string.IsNullOrEmpty(phongBanIdStr))
-                    return Unauthorized();
+                    return RedirectToAction("Login", "Auth");
 
                 var userId = int.Parse(userIdStr);
                 var phongBanId = int.Parse(phongBanIdStr);
@@ -170,7 +172,7 @@ namespace QL_ThuChiNoiBo.Controllers
         public async Task<IActionResult> Edit(int id)
         {
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+            if (string.IsNullOrEmpty(userIdStr)) return RedirectToAction("Login", "Auth");
             var userId = int.Parse(userIdStr);
 
             var phieu = await _context.PhieuDeXuats
@@ -225,7 +227,7 @@ namespace QL_ThuChiNoiBo.Controllers
                 }
 
                 var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+                if (string.IsNullOrEmpty(userIdStr)) return RedirectToAction("Login", "Auth");
                 var userId = int.Parse(userIdStr);
 
                 using var transaction = await _context.Database.BeginTransactionAsync();
@@ -290,7 +292,7 @@ namespace QL_ThuChiNoiBo.Controllers
         public async Task<IActionResult> Details(int id)
         {
             var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+            if (string.IsNullOrEmpty(userIdStr)) return RedirectToAction("Login", "Auth");
             var userId = int.Parse(userIdStr);
             var user = await _context.NhanViens.FindAsync(userId);
 
@@ -318,6 +320,8 @@ namespace QL_ThuChiNoiBo.Controllers
         }
     }
 }
+
+
 
 
 
