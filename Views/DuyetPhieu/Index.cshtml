@@ -47,7 +47,7 @@
                             <td class="fw-bold text-danger">@item.TongTien.ToString("N0") <span class="text-muted fw-normal small">VNĐ</span></td>
                             <td class="text-muted small"><i class="bi bi-clock me-1"></i> @item.NgayTao?.ToString("dd/MM/yyyy HH:mm")</td>
                             <td class="text-end pe-4">
-                                <a asp-controller="PhieuDeXuat" asp-action="Details" asp-route-id="@item.MaPhieu" class="btn btn-sm btn-primary shadow-sm rounded-pill px-3">Duyệt ngay <i class="bi bi-arrow-right-short"></i></a>
+                                <a asp-controller="PhieuDeXuat" asp-action="Details" asp-route-id="@item.MaPhieu" class="btn btn-sm btn-primary shadow-sm rounded-pill px-3">Xử lý <i class="bi bi-arrow-right-short"></i></a>
                             </td>
                         </tr>
                     }
@@ -88,5 +88,6 @@
         </ul>
     </nav>
 }
+
 
 

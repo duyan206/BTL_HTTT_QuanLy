@@ -155,6 +155,7 @@ namespace QL_ThuChiNoiBo.Controllers
                     }
 
                     await _context.SaveChangesAsync();
+                    if (action == "Submit") { await _workflowService.NotifyNextApproverAsync(phieu); await _context.SaveChangesAsync(); }
                     await transaction.CommitAsync();
                     TempData["SuccessMessage"] = action == "Submit" ? "Đã thao tác gửi thành công!" : "Đã lưu nháp!";
                     return RedirectToAction(nameof(Index));
@@ -275,6 +276,7 @@ namespace QL_ThuChiNoiBo.Controllers
                     }
 
                     await _context.SaveChangesAsync();
+                    if (action == "Submit") { await _workflowService.NotifyNextApproverAsync(phieu); await _context.SaveChangesAsync(); }
                     await transaction.CommitAsync();
                     TempData["SuccessMessage"] = action == "Submit" ? "Đã thao tác gửi thành công!" : "Đã lưu nháp!";
                     return RedirectToAction(nameof(Index));
@@ -320,6 +322,8 @@ namespace QL_ThuChiNoiBo.Controllers
         }
     }
 }
+
+
 
 
 
