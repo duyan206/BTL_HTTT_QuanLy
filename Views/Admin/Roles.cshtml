@@ -1,0 +1,64 @@
+﻿@model IEnumerable<QL_ThuChiNoiBo.Controllers.AdminController.RoleViewModel>
+@{
+    ViewData["Title"] = "RBAC Configuration";
+    var allPerms = ViewBag.AllPermissions as List<QL_ThuChiNoiBo.Controllers.AdminController.PermissionViewModel>;
+}
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0"><i class="bi bi-shield-lock-fill text-danger me-2"></i> Phân Quyền RBAC</h2>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+            <button class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["ErrorMessage"]
+            <button class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row">
+        @foreach (var r in Model)
+        {
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm h-100 border-0">
+                    <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between">
+                        <span>Role: @r.RoleName</span>
+                        <span class="badge bg-secondary">@r.Description</span>
+                    </div>
+                    <div class="card-body">
+                        <form asp-action="UpdateRolePermissions" method="post">
+                            <input type="hidden" name="roleId" value="@r.RoleId" />
+                            <div class="row">
+                                @foreach (var p in allPerms)
+                                {
+                                    bool hasPerm = r.PermissionIds.Contains(p.PermissionId);
+                                    <div class="col-12 mb-3">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" name="permissions" value="@p.PermissionId" id="switch_@(r.RoleId)_@(p.PermissionId)" @(hasPerm ? "checked" : "")>
+                                            <label class="form-check-label" for="switch_@(r.RoleId)_@(p.PermissionId)">
+                                                <span class="fw-bold text-primary">@p.PermissionCode</span>
+                                                <small class="text-muted d-block">@p.Description</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            <hr />
+                            <button type="submit" class="btn btn-primary w-100 rounded-pill">Lưu Cấu Hình</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+

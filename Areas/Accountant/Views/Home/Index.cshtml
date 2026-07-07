@@ -1,0 +1,81 @@
+@{
+    ViewData["Title"] = "Phân Hệ Kế Toán";
+}
+
+<div class="row g-4">
+    <div class="col-12">
+        <h4 class="fw-bold text-info mb-0">Nghiệp Vụ Kế Toán 📊</h4>
+        <p class="text-muted">Kiểm soát thu chi, xuất báo cáo và chốt sổ tài chính định kỳ.</p>
+    </div>
+
+    <!-- Quick Tool Cards -->
+    <div class="col-md-4">
+        <div class="card p-4 border-0 h-100" style="background: linear-gradient(145deg, #ffffff, #f0f8ff);">
+            <div class="d-flex flex-column align-items-center text-center">
+                <div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <i class="bi bi-file-earmark-excel fs-3"></i>
+                </div>
+                <h5 class="fw-bold">Kết Xuất Báo Cáo</h5>
+                <p class="text-muted small mb-4">In sổ cái, chi tiết thu chi theo từng phòng ban ra file Excel.</p>
+                <div class="mt-auto w-100">
+                    <form method="get" asp-area="Accountant" asp-controller="ExportChotSo" asp-action="XuatBaoCaoThang" class="d-flex gap-2">
+                        <select name="month" class="form-select form-select-sm w-auto">
+                            @for(var m=1;m<=12;m++){ <option value="@m" selected="@(DateTime.Now.Month == m)">Tháng @m</option> }
+                        </select>
+                        <select name="year" class="form-select form-select-sm w-auto">
+                            @for(var y=2023;y<=DateTime.Now.Year;y++){ <option value="@y" selected="@(DateTime.Now.Year == y)">@y</option> }
+                        </select>
+                        <button type="submit" class="btn btn-info btn-sm text-white px-3 flex-grow-1"><i class="bi bi-download"></i> Tải</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card p-4 border-0 h-100 position-relative shadow-sm" style="border: 1px solid rgba(13, 202, 240, 0.2);">
+            <div class="d-flex flex-column align-items-center text-center">
+                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                    <i class="bi bi-lock-fill fs-3"></i>
+                </div>
+                <h5 class="fw-bold">Chốt Sổ Cuối Kỳ</h5>
+                <p class="text-muted small mb-4">Đóng gói dữ liệu thu chi tháng và cuộn ngân sách tồn sang kỳ sau.</p>
+                <div class="mt-auto w-100">
+                    <button class="btn btn-outline-primary fw-bold w-100" onclick="confirmChotSo()">
+                        <i class="bi bi-shield-check"></i> Chốt Sổ Ngay
+                    </button>
+                    <form id="frmChotSo" method="post" asp-area="Accountant" asp-controller="ExportChotSo" asp-action="XacNhanChotSo" style="display:none">
+                        <input type="hidden" name="month" value="@DateTime.Now.Month" />
+                        <input type="hidden" name="year" value="@DateTime.Now.Year" />
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function confirmChotSo() {
+            Swal.fire({
+                title: 'Khóa Sổ Lệnh?',
+                text: "Bạn có chắc chắn muốn chốt sổ tháng này? Hành động này sẽ khóa toàn bộ phiếu đã duyệt và chuyển tồn ngân quỹ sang tháng mới!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#0dcaf0',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Đồng ý chốt sổ'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var data = new FormData(document.getElementById('frmChotSo'));
+                    fetch('@Url.Action("XacNhanChotSo", "ExportChotSo", new { area = "Accountant" })', { method: 'POST', body: data })
+                        .then(r => r.json())
+                        .then(res => {
+                            if(res.success) { Swal.fire('Thành công', res.message, 'success'); }
+                            else { Swal.fire('Lỗi', res.message, 'error'); }
+                        });
+                }
+            })
+        }
+    </script>
+}

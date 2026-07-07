@@ -1,0 +1,37 @@
+@{
+    ViewData["Title"] = "Dashboard Ban Giám Đốc";
+}
+
+<div class="row g-4">
+    <div class="col-12">
+        <h4 class="fw-bold mb-0 text-success">Khu Vực Ban Lãnh Đạo 📈</h4>
+        <p class="text-muted">Quản trị dòng tiền, chiến lược phân bổ và kiểm soát chi phí doanh nghiệp.</p>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card bg-success text-white p-4 h-100 overflow-hidden position-relative">
+            <div class="position-absolute end-0 bottom-0 opacity-10" style="transform: rotate(-15deg) translate(20px, 30px);">
+                <i class="bi bi-graph-up-arrow" style="font-size: 15rem;"></i>
+            </div>
+            <div class="position-relative z-1">
+                <h5 class="fw-bold mb-1">Góc Báo Cáo Phân Tích</h5>
+                <p class="mb-4 opacity-75 small">Xem Biểu đồ và Dữ liệu thực tế hàng năm ở hệ thống cốt lõi.</p>
+                <a href="/" class="btn btn-light fw-bold px-4 py-2 text-success">
+                    <i class="bi bi-eye-fill me-2"></i> Xem Dashboard Công Ty
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card p-4 h-100" style="border: 2px solid rgba(25,135,84,0.1);">
+            <h5 class="fw-bold text-dark mb-1">Cấp Phát Ngân Sách</h5>
+            <p class="text-muted small mb-4">Giao hạn mức kinh phí cho các Phòng ban trực thuộc.</p>
+            <div class="mt-auto">
+                <a asp-controller="NganSach" asp-action="Index" class="btn btn-outline-success fw-bold px-4 py-2 w-100">
+                    <i class="bi bi-cash-coin me-2"></i> Kích Hoạt Phân Bổ Ngân Sách
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

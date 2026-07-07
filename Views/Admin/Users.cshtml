@@ -1,0 +1,311 @@
+﻿@model IEnumerable<QL_ThuChiNoiBo.Models.NhanVien>
+@{
+    ViewData["Title"] = "Quản lý Tài Khoản";
+}
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0"><i class="bi bi-people-fill text-primary me-2"></i> Quản lý Tài Khoản Người Dùng</h2>
+        <button class="btn btn-primary rounded-pill shadow-sm" onclick="openCreateUserModal()">
+            <i class="bi bi-person-plus-fill me-1"></i> Thêm Nhân Sự Mới
+        </button>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Mã NV</th>
+                            <th>Tên Đăng Nhập</th>
+                            <th>Họ Tên</th>
+                            <th>Phòng Ban</th>
+                            <th>Chức Vụ</th>
+                            <th>Trạng Thái</th>
+                            <th class="text-center">Hành Động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var u in Model)
+                        {
+                            <tr>
+                                <td><span class="badge bg-secondary">#@u.MaNhanVien</span></td>
+                                <td><span class="fw-bold">@u.TenDangNhap</span></td>
+                                <td>@u.HoTen</td>
+                                <td>@(u.MaPhongBanNavigation?.TenPhongBan ?? "N/A")</td>
+                                <td>@(u.MaChucVuNavigation?.TenChucVu ?? "N/A")</td>
+                                <td>
+                                    @if(u.Status == "Inactive" || u.TrangThaiHoatDong == false) {
+                                        <span class="badge bg-danger">Đã khóa</span>
+                                    } else {
+                                        <span class="badge bg-success">Đang hoạt động</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-info rounded-pill text-white shadow-sm" onclick="openEditUserModal(@u.MaNhanVien)">Sửa</button>
+                                    <form asp-action="ResetPassword" asp-route-id="@u.MaNhanVien" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn Reset mật khẩu người này về mặc định không?');">
+                                        <button type="submit" class="btn btn-sm btn-warning rounded-pill shadow-sm">Reset</button>
+                                    </form>
+                                    @if(u.Status == "Inactive" || u.TrangThaiHoatDong == false) {
+                                        <form asp-action="UnlockUser" asp-route-id="@u.MaNhanVien" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn MỞ KHÓA tài khoản này không?');">
+                                            <button type="submit" class="btn btn-sm btn-success rounded-pill shadow-sm">Mở Khóa</button>
+                                        </form>
+                                    } else {
+                                        <form asp-action="SuspendUser" asp-route-id="@u.MaNhanVien" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc muốn KHÓA tài khoản này không?');">
+                                            <button type="submit" class="btn btn-sm btn-secondary rounded-pill shadow-sm">Khóa</button>
+                                        </form>
+                                    }
+                                    <form asp-action="DeleteUser" asp-route-id="@u.MaNhanVien" method="post" class="d-inline" onsubmit="return confirm('NGUY HIỂM: Bạn có chắc muốn XÓA VĨNH VIỄN tài khoản này không?');">
+                                        <button type="submit" class="btn btn-sm btn-danger rounded-pill shadow-sm">Xóa</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Cập Nhật Nhân Sự</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="frmEditUser">
+                    <input type="hidden" id="editMaNhanVien" />
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tên Đăng Nhập</label>
+                        <input type="text" class="form-control" id="editTenDangNhap" disabled />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Họ Tên</label>
+                        <input type="text" class="form-control" id="editHoTen" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Email</label>
+                        <input type="email" class="form-control" id="editEmail" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Mật Khẩu (Để trống nếu ko đổi)</label>
+                        <input type="password" class="form-control" id="editMatKhau" placeholder="********" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Phòng Ban</label>
+                        <select class="form-select" id="editPhongBan" required></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Chức Vụ</label>
+                        <select class="form-select" id="editChucVu" required></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nhóm Quyền (RBAC Role)</label>
+                        <select class="form-select" id="editRole" required></select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-info rounded-pill px-4 text-white" onclick="submitEditUser()">
+                    <i class="bi bi-save me-1"></i> Lưu Thay Đổi
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Create User Modal -->
+<div class="modal fade" id="createUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-person-plus-fill me-2"></i>Thêm Nhân Sự Mới</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="frmCreateUser">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tên Đăng Nhập</label>
+                        <input type="text" class="form-control" id="txtTenDangNhap" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Mật Khẩu</label>
+                        <input type="password" class="form-control" id="txtMatKhau" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Họ Tên</label>
+                        <input type="text" class="form-control" id="txtHoTen" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Email</label>
+                        <input type="email" class="form-control" id="txtEmail" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Phòng Ban</label>
+                        <select class="form-select" id="selPhongBan" required></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Chức Vụ</label>
+                        <select class="form-select" id="selChucVu" required></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nhóm Quyền (RBAC Role)</label>
+                        <select class="form-select" id="selRole" required></select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4" onclick="submitCreateUser()">
+                    <i class="bi bi-save me-1"></i> Tạo Mới
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openCreateUserModal() {
+            fetch('/Admin/GetCreateUserFormData')
+                .then(res => res.json())
+                .then(data => {
+                    let pbOptions = '<option value="">-- Chọn Phòng Ban --</option>';
+                    data.phongBans.forEach(p => { pbOptions += `<option value="${p.maPhongBan}">${p.tenPhongBan}</option>`; });
+                    document.getElementById('selPhongBan').innerHTML = pbOptions;
+
+                    let cvOptions = '<option value="">-- Chọn Chức Vụ --</option>';
+                    data.chucVus.forEach(c => { cvOptions += `<option value="${c.maChucVu}">${c.tenChucVu}</option>`; });
+                    document.getElementById('selChucVu').innerHTML = cvOptions;
+
+                    let rOptions = '<option value="">-- Chọn Nhóm Quyền --</option>';
+                    data.roles.forEach(r => { rOptions += `<option value="${r.roleId}">${r.roleName}</option>`; });
+                    document.getElementById('selRole').innerHTML = rOptions;
+
+                    var myModal = new bootstrap.Modal(document.getElementById('createUserModal'));
+                    myModal.show();
+                })
+                .catch(err => {
+                    Swal.fire('Lỗi!', 'Không thể tải dữ liệu danh mục', 'error');
+                });
+        }
+
+        function submitCreateUser() {
+            const payload = {
+                TenDangNhap: document.getElementById('txtTenDangNhap').value,
+                MatKhau: document.getElementById('txtMatKhau').value,
+                HoTen: document.getElementById('txtHoTen').value,
+                Email: document.getElementById('txtEmail').value,
+                MaPhongBan: parseInt(document.getElementById('selPhongBan').value),
+                MaChucVu: parseInt(document.getElementById('selChucVu').value),
+                RoleId: parseInt(document.getElementById('selRole').value)
+            };
+
+            if (!payload.TenDangNhap || !payload.MatKhau || !payload.HoTen || isNaN(payload.MaPhongBan) || isNaN(payload.MaChucVu) || isNaN(payload.RoleId)) {
+                Swal.fire('Thiếu thông tin', 'Vui lòng điền đầy đủ các thông tin bắt buộc!', 'warning');
+                return;
+            }
+
+            fetch('/Admin/CreateUser', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(async res => {
+                if (res.ok) {
+                    window.location.reload();
+                } else {
+                    const errText = await res.text();
+                    Swal.fire('Thất bại', errText || 'Có lỗi xảy ra khi tạo người dùng!', 'error');
+                }
+            })
+            .catch(err => {
+                Swal.fire('Lỗi mạng', 'Không thể kết nối đến máy chủ!', 'error');
+            });
+        }
+            function openEditUserModal(id) {
+            Promise.all([
+                fetch('/Admin/GetCreateUserFormData').then(r => r.json()),
+                fetch('/Admin/GetEditUserFormData?id=' + id).then(r => r.json())
+            ])
+            .then(([catData, userData]) => {
+                let pbOptions = '<option value="">-- Chọn Phòng Ban --</option>';
+                catData.phongBans.forEach(p => { pbOptions += '<option value="' + p.maPhongBan + '"' + (p.maPhongBan === userData.maPhongBan ? ' selected' : '') + '>' + p.tenPhongBan + '</option>'; });
+                document.getElementById('editPhongBan').innerHTML = pbOptions;
+
+                let cvOptions = '<option value="">-- Chọn Chức Vụ --</option>';
+                catData.chucVus.forEach(c => { cvOptions += '<option value="' + c.maChucVu + '"' + (c.maChucVu === userData.maChucVu ? ' selected' : '') + '>' + c.tenChucVu + '</option>'; });
+                document.getElementById('editChucVu').innerHTML = cvOptions;
+
+                let rOptions = '<option value="">-- Chọn Nhóm Quyền --</option>';
+                catData.roles.forEach(r => { rOptions += '<option value="' + r.roleId + '"' + (r.roleId === userData.roleId ? ' selected' : '') + '>' + r.roleName + '</option>'; });
+                document.getElementById('editRole').innerHTML = rOptions;
+
+                document.getElementById('editMaNhanVien').value = userData.maNhanVien;
+                document.getElementById('editTenDangNhap').value = userData.tenDangNhap;
+                document.getElementById('editHoTen').value = userData.hoTen;
+                document.getElementById('editEmail').value = userData.email || '';
+                document.getElementById('editMatKhau').value = '';
+
+                var myModal = new bootstrap.Modal(document.getElementById('editUserModal'));
+                myModal.show();
+            })
+            .catch(err => {
+                Swal.fire('Lỗi!', 'Không thể truy xuất thông tin nhân sự', 'error');
+            });
+        }
+
+        function submitEditUser() {
+            const payload = {
+                MaNhanVien: parseInt(document.getElementById('editMaNhanVien').value),
+                TenDangNhap: document.getElementById('editTenDangNhap').value,
+                HoTen: document.getElementById('editHoTen').value,
+                Email: document.getElementById('editEmail').value,
+                MatKhau: document.getElementById('editMatKhau').value,
+                MaPhongBan: parseInt(document.getElementById('editPhongBan').value),
+                MaChucVu: parseInt(document.getElementById('editChucVu').value),
+                RoleId: parseInt(document.getElementById('editRole').value)
+            };
+
+            if (!payload.HoTen || isNaN(payload.MaPhongBan) || isNaN(payload.MaChucVu) || isNaN(payload.RoleId)) {
+                Swal.fire('Thiếu thông tin', 'Vui lòng điền đầy đủ các thông tin bắt buộc!', 'warning');
+                return;
+            }
+
+            fetch('/Admin/UpdateUser', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(async res => {
+                if (res.ok) {
+                    window.location.reload();
+                } else {
+                    const errText = await res.text();
+                    Swal.fire('Thất bại', errText || 'Lỗi cập nhật', 'error');
+                }
+            })
+            .catch(err => {
+                Swal.fire('Lỗi mạng', 'Lỗi lưu thông tin', 'error');
+            });
+        }
+    </script>
+}
+
+

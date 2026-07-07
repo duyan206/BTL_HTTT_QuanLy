@@ -1,17 +1,17 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using QL_ThuChiNoiBo.Filters;
 using Microsoft.EntityFrameworkCore;
 using QL_ThuChiNoiBo.Data;
 using System.Security.Claims;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using QL_ThuChiNoiBo.Constants;
 
-namespace QL_ThuChiNoiBo.Controllers
+namespace QL_ThuChiNoiBo.Areas.Director.Controllers
 {
-    [Authorize]
-    [HasPermission("ALLOCATE_BUDGET")]
+    [Area("Director")]
+    [Authorize(Roles = RoleConstants.Director)]
     public class NganSachController : Controller
     {
         private readonly QlThuChiNoiBoContext _context;
@@ -23,16 +23,22 @@ namespace QL_ThuChiNoiBo.Controllers
 
         public async Task<IActionResult> Index()
         {
-            
+            var role = User.FindFirstValue(System.Security.Claims.ClaimTypes.Role) ?? "";
+            var allowedRoles = new[] { RoleConstants.Director };
+            if (!allowedRoles.Contains(role))
+            {
+                TempData["Error"] = "Lỗ hổng RBAC bị chặn: Nhân viên tuyệt đối không được cấp phép truy cập Quản trị Ngân Sách!";
+                return RedirectToAction("Index", "PhieuDeXuat");
+            }
 
             var month = DateTime.Now.Month; var year = DateTime.Now.Year;
             var nganSaches = await _context.NganSaches
                 .Include(n => n.MaPhongBanNavigation)
-                .Where(n => n.Thang == month && n.NamTaiChinh == year && n.MaPhongBanNavigation.TenPhongBan != "System Administration")
+                .Where(n => n.Thang == month && n.NamTaiChinh == year)
                 .ToListAsync();
 
             // Tự động Add thêm những phòng ban rỗng chưa có bản ghi ngân sách trong database nếu bị sót
-            var allDepartments = await _context.PhongBans.Where(p => p.TenPhongBan != "System Administration").ToListAsync();
+            var allDepartments = await _context.PhongBans.ToListAsync();
             foreach (var dept in allDepartments)
             {
                 if (!nganSaches.Any(n => n.MaPhongBan == dept.MaPhongBan))
@@ -60,7 +66,13 @@ namespace QL_ThuChiNoiBo.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateBudget(int maPhongBan, decimal tongNganSachMoi)
         {
-            
+            var role = User.FindFirstValue(System.Security.Claims.ClaimTypes.Role) ?? "";
+            var allowedRoles = new[] { RoleConstants.Director };
+            if (!allowedRoles.Contains(role))
+            {
+                TempData["Error"] = "Cảnh báo bảo mật: Bạn không có chức năng Cấp phát ngân sách!";
+                return RedirectToAction("Index", "PhieuDeXuat");
+            }
 
             if (tongNganSachMoi < 0)
             {
@@ -95,8 +107,5 @@ namespace QL_ThuChiNoiBo.Controllers
         }
     }
 }
-
-
-
 
 

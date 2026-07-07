@@ -1,4 +1,4 @@
--- =============================================
+﻿-- =============================================
 -- HỆ THỐNG QUẢN LÝ VÀ PHÊ DUYỆT THU CHI NỘI BỘ
 -- BẢN PRODUCTION - TÍCH HỢP XÁC THỰC BCRYPT (CÓ MODULE THU NỘI BỘ)
 -- =============================================
@@ -20,8 +20,31 @@ USE QL_ThuChiNoiBo;
 GO
 
 -- =============================================
--- 1. CỤM DANH MỤC (MASTER DATA)
+-- 1. CỤM DANH MỤC CƠ BẢN (MASTER DATA & RBAC)
 -- =============================================
+
+-- Nhóm phân quyền (Roles)
+CREATE TABLE Roles (
+    Role_ID INT IDENTITY(1,1) PRIMARY KEY,
+    Role_Name VARCHAR(50) NOT NULL UNIQUE,
+    Description NVARCHAR(255)
+);
+
+-- Danh mục Quyền hạn (Permissions)
+CREATE TABLE Permissions (
+    Permission_ID INT IDENTITY(1,1) PRIMARY KEY,
+    Permission_Code VARCHAR(50) NOT NULL UNIQUE,
+    Description NVARCHAR(255)
+);
+
+-- Chi tiết Phân quyền Role (Role_Permissions)
+CREATE TABLE Role_Permissions (
+    Role_ID INT,
+    Permission_ID INT,
+    PRIMARY KEY (Role_ID, Permission_ID),
+    FOREIGN KEY (Role_ID) REFERENCES Roles(Role_ID) ON DELETE CASCADE,
+    FOREIGN KEY (Permission_ID) REFERENCES Permissions(Permission_ID) ON DELETE CASCADE
+);
 
 -- Chức vụ
 CREATE TABLE ChucVu (
@@ -49,6 +72,8 @@ CREATE TABLE NhanVien (
     Email VARCHAR(100) NULL,
     SoDienThoai VARCHAR(20) NULL,
     TrangThaiHoatDong BIT DEFAULT 1,
+    Status VARCHAR(50) DEFAULT 'Active',
+    MFA_Enabled BIT DEFAULT 0,
     FOREIGN KEY (MaPhongBan) REFERENCES PhongBan(MaPhongBan),
     FOREIGN KEY (MaChucVu) REFERENCES ChucVu(MaChucVu)
 );
@@ -57,15 +82,24 @@ ALTER TABLE PhongBan
 ADD CONSTRAINT FK_PhongBan_TruongPhong 
 FOREIGN KEY (MaTruongPhong) REFERENCES NhanVien(MaNhanVien);
 
+-- Ánh xạ Nhân viên - Vai trò (User_Roles)
+CREATE TABLE User_Roles (
+    User_ID INT,
+    Role_ID INT,
+    PRIMARY KEY (User_ID, Role_ID),
+    FOREIGN KEY (User_ID) REFERENCES NhanVien(MaNhanVien) ON DELETE CASCADE,
+    FOREIGN KEY (Role_ID) REFERENCES Roles(Role_ID) ON DELETE CASCADE
+);
+
 -- Ngân sách phòng ban
 CREATE TABLE NganSach (
     MaNganSach INT IDENTITY(1,1) PRIMARY KEY,
     MaPhongBan INT NOT NULL,
     NamTaiChinh INT NOT NULL, 
-    Thang INT NULL,       -- [UPDATE] Hỗ trợ Chốt Sổ đệm cuốn chiếu tháng
+    Thang INT NULL, 
     TongNganSach DECIMAL(18,2) NOT NULL DEFAULT 0,
     DaChi DECIMAL(18,2) NOT NULL DEFAULT 0,
-    DaThu DECIMAL(18,2) NOT NULL DEFAULT 0,     -- [UPDATE] Thêm túi đựng tiền THU NỘI BỘ
+    DaThu DECIMAL(18,2) NOT NULL DEFAULT 0,
     TienDangTreo DECIMAL(18,2) NOT NULL DEFAULT 0, 
     FOREIGN KEY (MaPhongBan) REFERENCES PhongBan(MaPhongBan)
 );
@@ -79,7 +113,7 @@ CREATE TABLE PhieuDeXuat (
     MaPhieu INT IDENTITY(1,1) PRIMARY KEY,
     NguoiTao INT NOT NULL,
     MaPhongBan INT NOT NULL,
-    LoaiPhieu NVARCHAR(50) NOT NULL, -- 'TamUng', 'HoanUng', 'ThanhToan', 'ThuNoiBo'
+    LoaiPhieu NVARCHAR(50) NOT NULL,
     TongTien DECIMAL(18,2) NOT NULL DEFAULT 0,
     LyDo NVARCHAR(MAX),
     TrangThai NVARCHAR(50) NOT NULL DEFAULT 'Nhap', 
@@ -138,8 +172,16 @@ CREATE TABLE ChiTietLuongDuyet (
 );
 
 -- =============================================
--- 4. CỤM DẤU VẾT (AUDIT LOG)
+-- 4. CỤM DẤU VẾT & THÔNG BÁO (AUDIT & NOTIFICATION)
 -- =============================================
+
+-- Lịch sử toàn hệ thống
+CREATE TABLE Audit_Logs (
+    Log_ID INT IDENTITY(1,1) PRIMARY KEY,
+    Action NVARCHAR(100) NOT NULL,
+    Timestamp DATETIME DEFAULT GETDATE(),
+    Performed_By NVARCHAR(255) NULL
+);
 
 -- Nhật ký phê duyệt
 CREATE TABLE NhatKyDuyet (
@@ -152,9 +194,8 @@ CREATE TABLE NhatKyDuyet (
     FOREIGN KEY (MaPhieu) REFERENCES PhieuDeXuat(MaPhieu),
     FOREIGN KEY (NguoiXuLy) REFERENCES NhanVien(MaNhanVien)
 );
-GO
 
-
+-- Thông báo người dùng
 CREATE TABLE ThongBao (
     MaThongBao INT IDENTITY(1,1) PRIMARY KEY,
     NguoiNhan INT NOT NULL,
@@ -170,53 +211,84 @@ GO
 -- 5. BƠM DỮ LIỆU MẪU (SEED DATA)
 -- =============================================
 
--- 1. Giám đốc
--- 2. Kế toán trưởng
--- 3. Trưởng phòng Kinh doanh
--- 4. Nhân viên KD (Nhóm 7)
--- 5. Nhân viên KD 2
--- 6. Trưởng phòng IT
--- 7. Nhân viên IT
--- 8. Trưởng phòng HCNS
--- 9. Nhân viên HCNS
--- 10. Nhân viên Kế toán
+-- 5.1. Dữ liệu Roles & Permissions
+INSERT INTO Roles (Role_Name, Description) VALUES 
+('Employee', N'Nhân viên thường'),
+('Manager', N'Quản lý/Trưởng phòng'),
+('Director', N'Giám đốc'),
+('Super_Admin', N'Quản trị viên hạ tầng'),
+('Finance_Director', N'Giám đốc Tài chính'),
+('Chief_Accountant', N'Kế toán trưởng');
 
--- 5.1. Chức vụ & Phòng ban
+INSERT INTO Permissions (Permission_Code, Description) VALUES
+('USER_MANAGE', N'Quản lý người dùng'),
+('ROLE_MANAGE', N'Phân quyền quản trị'),
+('SYSTEM_CONFIG', N'Cấu hình hệ thống'),
+('AUDIT_VIEW', N'Xem lịch sử hệ thống'),
+('VIEW_MIS', N'Xem MIS Dashboard'),
+('ALLOCATE_BUDGET', N'Cấp phát ngân sách'),
+('BUDGET_CREATE', N'Tạo đề xuất ngân sách'),
+('BUDGET_APPROVE', N'Duyệt yêu cầu ngân sách');
+
+-- Quyền Super Admin (1,2,3,4)
+INSERT INTO Role_Permissions (Role_ID, Permission_ID) VALUES
+(4, 1), (4, 2), (4, 3), (4, 4);
+
+-- Quyền Finance Director (5,6)
+INSERT INTO Role_Permissions (Role_ID, Permission_ID) VALUES
+(5, 5), (5, 6);
+
+-- Quyền Chief Accountant (5)
+INSERT INTO Role_Permissions (Role_ID, Permission_ID) VALUES
+(6, 5);
+
+-- 5.2. Chức vụ & Phong ban
 INSERT INTO ChucVu (TenChucVu) VALUES 
-(N'Giám đốc'), (N'Kế toán trưởng'), (N'Trưởng phòng'), (N'Nhân viên');
+(N'Giám đốc'), (N'Kế toán trưởng'), (N'Trưởng phòng'), (N'Nhân viên'), (N'Super Admin');
 
 INSERT INTO PhongBan (TenPhongBan) VALUES 
-(N'Ban Giám đốc'), (N'Phòng Kế toán'), (N'Phòng Kinh doanh'), (N'Phòng IT'), (N'Phòng Hành chính - NS');
+(N'Ban Giám đốc'), (N'Phòng Kế toán'), (N'Phòng Kinh doanh'), (N'Phòng IT'), (N'Phòng Hành chính - NS'), (N'System Administration');
 
--- 5.2. Nhân viên
-DECLARE @DefaultPassHash VARCHAR(255) = '$2a$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjGoRX.vO2';
+-- 5.3. Nhân sự
+DECLARE @DefaultPassHash VARCHAR(255) = '.vO2';
 
-INSERT INTO NhanVien (HoTen, MaPhongBan, MaChucVu, TenDangNhap, MatKhauHash, Email) VALUES 
-(N'Lê Duy An', 1, 1, 'anld', @DefaultPassHash, 'anld@dainam.edu.vn'), 
-(N'Nguyễn Thế Phương Nam', 2, 2, 'namntp', @DefaultPassHash, 'namntp@dainam.edu.vn'), 
-(N'Đỗ Duy Văn', 3, 3, 'vandd', @DefaultPassHash, 'vandd@dainam.edu.vn'),  
-(N'Lê Văn Sếp', 3, 4, 'seplv', @DefaultPassHash, 'seplv@congty.com'),  
-(N'Trần Thị Sale', 3, 4, 'salett', @DefaultPassHash, 'salett@congty.com'),  
-(N'Ông Kẹ IT', 4, 3, 'keit', @DefaultPassHash, 'keit@congty.com'),  
-(N'Phạm Coder', 4, 4, 'coderp', @DefaultPassHash, 'coderp@congty.com'),  
-(N'Nguyễn Mẫu Mực', 5, 3, 'mucnm', @DefaultPassHash, 'mucnm@congty.com'), 
-(N'Trần Tuyển Dụng', 5, 4, 'dungtt', @DefaultPassHash, 'dungtt@congty.com'), 
-(N'Lê Kế Toán', 2, 4, 'toanlk', @DefaultPassHash, 'toanlk@congty.com');
+INSERT INTO NhanVien (HoTen, MaPhongBan, MaChucVu, TenDangNhap, MatKhauHash, Email, TrangThaiHoatDong, Status, MFA_Enabled) VALUES 
+(N'Lê Duy An', 1, 1, 'anld', @DefaultPassHash, 'anld@dainam.edu.vn', 1, 'Active', 0), 
+(N'Nguyễn Thế Phương Nam', 2, 2, 'namntp', @DefaultPassHash, 'namntp@dainam.edu.vn', 1, 'Active', 0), 
+(N'Đỗ Duy Văn', 3, 3, 'vandd', @DefaultPassHash, 'vandd@dainam.edu.vn', 1, 'Active', 0),  
+(N'Lê Văn Sếp', 3, 4, 'seplv', @DefaultPassHash, 'seplv@congty.com', 1, 'Active', 0),  
+(N'Trần Thị Sale', 3, 4, 'salett', @DefaultPassHash, 'salett@congty.com', 1, 'Active', 0),  
+(N'Ông Kẹ IT', 4, 3, 'keit', @DefaultPassHash, 'keit@congty.com', 1, 'Active', 0),  
+(N'Phạm Coder', 4, 4, 'coderp', @DefaultPassHash, 'coderp@congty.com', 1, 'Active', 0),  
+(N'Nguyễn Mẫu Mực', 5, 3, 'mucnm', @DefaultPassHash, 'mucnm@congty.com', 1, 'Active', 0), 
+(N'Trần Tuyển Dụng', 5, 4, 'dungtt', @DefaultPassHash, 'dungtt@congty.com', 1, 'Active', 0), 
+(N'Lê Kế Toán', 2, 4, 'toanlk', @DefaultPassHash, 'toanlk@congty.com', 1, 'Active', 0),
+(N'System Root Admin', 6, 5, 'admin', @DefaultPassHash, 'admin@finflow.space', 1, 'Active', 1);
 
+-- Thiết lập Trưởng phòng
 UPDATE PhongBan SET MaTruongPhong = 1 WHERE MaPhongBan = 1;
 UPDATE PhongBan SET MaTruongPhong = 2 WHERE MaPhongBan = 2;
 UPDATE PhongBan SET MaTruongPhong = 3 WHERE MaPhongBan = 3;
 UPDATE PhongBan SET MaTruongPhong = 6 WHERE MaPhongBan = 4;
 UPDATE PhongBan SET MaTruongPhong = 8 WHERE MaPhongBan = 5;
 
--- 5.3. Cấp ngân sách
+-- Thiết lập Quyền Cá Nhân (User_Roles)
+-- Sếp An -> Director (Role 3), Finance_Director (Role 5)
+INSERT INTO User_Roles (User_ID, Role_ID) VALUES (1, 3), (1, 5); 
+-- Trưởng phòng Nam -> Chief_Accountant (Role 6)
+INSERT INTO User_Roles (User_ID, Role_ID) VALUES (2, 6);
+-- Admin (ID tự sinh/11) -> Super_Admin (Role 4)
+DECLARE @AdminId INT = (SELECT TOP 1 MaNhanVien FROM NhanVien WHERE TenDangNhap = 'admin');
+INSERT INTO User_Roles (User_ID, Role_ID) VALUES (@AdminId, 4);
+
+-- 5.4. Ngân sách
 INSERT INTO NganSach (MaPhongBan, NamTaiChinh, TongNganSach, DaChi, DaThu, TienDangTreo) VALUES 
 (2, 2026, 20000000, 0, 0, 0),        
 (3, 2026, 100000000, 5000000, 0, 0),
 (4, 2026, 200000000, 0, 0, 45000000),
 (5, 2026, 50000000, 0, 0, 0);        
 
--- 5.4. Setup Luồng duyệt (Workflow Engine)
+-- 5.5. Setup Luồng duyệt (Workflow)
 -- ID 1, 2: <= 10tr (Chỉ Kế toán trưởng)
 INSERT INTO CauHinhLuongDuyet (LoaiPhieu, TienToiThieu, TienToiDa, TongSoBuoc) 
 VALUES (N'TamUng', 0, 10000000, 1), (N'ThanhToan', 0, 10000000, 1);
@@ -227,14 +299,13 @@ INSERT INTO CauHinhLuongDuyet (LoaiPhieu, TienToiThieu, TienToiDa, TongSoBuoc)
 VALUES (N'TamUng', 10000000.01, 999999999, 2), (N'ThanhToan', 10000000.01, 999999999, 2);
 INSERT INTO ChiTietLuongDuyet (MaCauHinh, ThuTuBuoc, MaChucVuDuyet) VALUES (3, 1, 2), (3, 2, 1), (4, 1, 2), (4, 2, 1);
 
--- [UPDATE] ID 5: Luồng duyệt PHIẾU THU NỘI BỘ (Chỉ 1 bước cho Kế toán trưởng xác nhận tiền vào)
+-- Phiếu Thu
 INSERT INTO CauHinhLuongDuyet (LoaiPhieu, TienToiThieu, TienToiDa, TongSoBuoc) 
 VALUES (N'ThuNoiBo', 0, 9999999999, 1);
 INSERT INTO ChiTietLuongDuyet (MaCauHinh, ThuTuBuoc, MaChucVuDuyet) 
 VALUES (5, 1, 2);
 
--- 5.5. Đổ dữ liệu Test Phiếu Đề Xuất
--- Phiếu 1, 2, 3, 4 giữ nguyên
+-- 5.6. Giao dịch test mẫu
 INSERT INTO PhieuDeXuat (NguoiTao, MaPhongBan, LoaiPhieu, TongTien, LyDo, TrangThai, BuocDuyetHienTai)
 VALUES (4, 3, N'TamUng', 5000000, N'Tạm ứng đi công tác Đà Nẵng', N'DaChiTien', 1);
 INSERT INTO ChiTietPhieu (MaPhieu, HangMuc, SoTien, GhiChu) VALUES 
@@ -257,17 +328,13 @@ VALUES (9, 5, N'TamUng', 2000000, N'Tạm ứng mua hoa sinh nhật sếp', N'Tu
 INSERT INTO ChiTietPhieu (MaPhieu, HangMuc, SoTien) VALUES (4, N'Hoa sinh nhật', 2000000);
 INSERT INTO NhatKyDuyet (MaPhieu, NguoiXuLy, HanhDong, GhiChu) VALUES (4, 2, N'TuChoi', N'Quỹ công đoàn không chi này.');
 
--- [UPDATE] Phiếu 5: Phiếu Thu Nội Bộ (Tiền phạt/Hoàn trả)
 INSERT INTO PhieuDeXuat (NguoiTao, MaPhongBan, LoaiPhieu, TongTien, LyDo, TrangThai, BuocDuyetHienTai)
 VALUES (7, 4, N'ThuNoiBo', 1500000, N'Nộp tiền phạt đi muộn tháng 5 của Phòng IT', N'ChoDuyet', 1);
 INSERT INTO ChiTietPhieu (MaPhieu, HangMuc, SoTien, GhiChu) VALUES 
 (5, N'Quỹ phạt đi muộn', 1500000, N'Phạm Coder nộp tiền mặt');
 GO
 
-
-
-
-SELECT MaNhanVien, HoTen, TenDangNhap FROM NhanVien
+-- SELECT MaNhanVien, HoTen, TenDangNhap FROM NhanVien
 -- 1. Giám đốc
 -- 2. Kế toán trưởng
 -- 3. Trưởng phòng Kinh doanh

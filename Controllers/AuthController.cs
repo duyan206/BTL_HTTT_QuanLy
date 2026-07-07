@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication;
+﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -60,6 +60,51 @@ namespace QL_ThuChiNoiBo.Controllers
                 new Claim("ChucVuId", user.MaChucVu.ToString())
             };
 
+                        var permissions = new System.Collections.Generic.List<string>();
+            using (var command = _context.Database.GetDbConnection().CreateCommand())
+            {
+                command.CommandText = @"
+                    SELECT p.Permission_Code 
+                    FROM User_Roles ur
+                    JOIN Role_Permissions rp ON ur.Role_ID = rp.Role_ID
+                    JOIN Permissions p ON rp.Permission_ID = p.Permission_ID
+                    WHERE ur.User_ID = @userId";
+                    
+                var param = command.CreateParameter();
+                param.ParameterName = "@userId";
+                param.Value = user.MaNhanVien;
+                command.Parameters.Add(param);
+
+                await _context.Database.OpenConnectionAsync();
+                using (var reader = await command.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        permissions.Add(reader.GetString(0));
+                    }
+                }
+                await _context.Database.CloseConnectionAsync();
+            }
+
+            foreach (var perm in permissions)
+            {
+                claims.Add(new Claim("Permission", perm));
+            }
+            
+            // Ghi Audit_Logs 
+            using (var cmd = _context.Database.GetDbConnection().CreateCommand())
+            {
+                cmd.CommandText = "INSERT INTO Audit_Logs (Action, Timestamp, Performed_By) VALUES ('User Login', GETDATE(), @uid)";
+                var p = cmd.CreateParameter();
+                p.ParameterName = "@uid";
+                p.Value = user.HoTen;
+                cmd.Parameters.Add(p);
+
+                await _context.Database.OpenConnectionAsync();
+                await cmd.ExecuteNonQueryAsync();
+                await _context.Database.CloseConnectionAsync();
+            }
+
             var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var authProperties = new AuthenticationProperties
             {
@@ -71,7 +116,16 @@ namespace QL_ThuChiNoiBo.Controllers
                 new ClaimsPrincipal(claimsIdentity),
                 authProperties);
 
-            return LocalRedirect(returnUrl ?? "/");
+                        if (string.IsNullOrEmpty(returnUrl) || returnUrl == "/")
+            {
+                if (permissions.Contains("USER_MANAGE") || permissions.Contains("ROLE_MANAGE") || permissions.Contains("AUDIT_VIEW"))
+                {
+                    return LocalRedirect("/Admin/Home/Index");
+                }
+                return RedirectToAction("Index", "Home");
+            }
+
+            return LocalRedirect(returnUrl);
         }
 
         [HttpGet]
@@ -117,6 +171,12 @@ namespace QL_ThuChiNoiBo.Controllers
             return RedirectToAction("Index", "Home");
         }
 
+        [HttpGet]
+        public IActionResult AccessDenied()
+        {
+            return View(); // Trả về trang 403 Access Denied
+        }
+
         public async Task<IActionResult> Logout()
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
@@ -124,4 +184,10 @@ namespace QL_ThuChiNoiBo.Controllers
         }
     }
 }
+
+
+
+
+
+
 

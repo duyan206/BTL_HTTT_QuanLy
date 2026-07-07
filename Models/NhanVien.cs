@@ -38,6 +38,8 @@ public partial class NhanVien
 
     public bool? TrangThaiHoatDong { get; set; }
 
+    public string? Status { get; set; }
+
     [ForeignKey("MaChucVu")]
     [InverseProperty("NhanViens")]
     public virtual ChucVu MaChucVuNavigation { get; set; } = null!;
@@ -58,3 +60,4 @@ public partial class NhanVien
     [InverseProperty("NguoiNhanNavigation")]
     public virtual ICollection<ThongBao> ThongBaos { get; set; } = new List<ThongBao>();
 }
+

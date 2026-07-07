@@ -1,5 +1,6 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using QL_ThuChiNoiBo.Filters;
 using QL_ThuChiNoiBo.Services;
 using System.Security.Claims;
 using System;
@@ -19,15 +20,10 @@ namespace QL_ThuChiNoiBo.Controllers
             _budgetService = budgetService;
         }
 
+        [HasPermission("VIEW_MIS")]
         public async Task<IActionResult> Index()
         {
-            var role = User.FindFirstValue(System.Security.Claims.ClaimTypes.Role) ?? "";
-            var allowedRoles = new[] { "Giám đốc", "Kế toán trưởng" };
-            if (!allowedRoles.Contains(role))
-            {
-                TempData["Error"] = "Cảnh báo bảo mật: Bạn không có quyền truy cập Dashboard phân tích dữ liệu công ty!";
-                return RedirectToAction("Index", "PhieuDeXuat");
-            }
+            
 
             var year = DateTime.Now.Year;
             var dashboardData = await _budgetService.GetBudgetDashboardAsync(year);
@@ -38,11 +34,10 @@ namespace QL_ThuChiNoiBo.Controllers
         }
 
         [HttpGet]
+        [HasPermission("VIEW_MIS")]
         public async Task<IActionResult> ExportBaoCaoChiTieu()
         {
-            var role = User.FindFirstValue(System.Security.Claims.ClaimTypes.Role) ?? "";
-            var allowedRoles = new[] { "Giám đốc", "Kế toán trưởng" };
-            if (!allowedRoles.Contains(role)) return RedirectToAction("Login", "Auth");
+            
 
             var year = DateTime.Now.Year;
             var dashboardData = await _budgetService.GetBudgetDashboardAsync(year);
@@ -94,5 +89,8 @@ namespace QL_ThuChiNoiBo.Controllers
         }
     }
 }
+
+
+
 
 

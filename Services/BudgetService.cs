@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using QL_ThuChiNoiBo.Data;
 using System;
 using System.Linq;
@@ -77,7 +77,7 @@ namespace QL_ThuChiNoiBo.Services
         {
             var nganSaches = await _context.NganSaches
                 .Include(n => n.MaPhongBanNavigation)
-                .Where(n => n.NamTaiChinh == year && n.Thang == DateTime.Now.Month)
+                .Where(n => n.NamTaiChinh == year && n.Thang == DateTime.Now.Month && n.MaPhongBanNavigation.TenPhongBan != "System Administration")
                 .ToListAsync();
 
             var result = new QL_ThuChiNoiBo.ViewModels.BudgetDashboardViewModel();
@@ -102,4 +102,5 @@ namespace QL_ThuChiNoiBo.Services
         }
     }
 }
+
 
